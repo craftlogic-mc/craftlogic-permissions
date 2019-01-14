@@ -1,0 +1,4 @@
+moduleName=CraftLogic-Scripts
+moduleVersion=1.0
+extensionClasses=ru.craftlogic.scripts.common.extension.TextComponentExtension,ru.craftlogic.scripts.common.extension.CommandSenderExtension,ru.craftlogic.scripts.common.extension.EnumExtension,ru.craftlogic.scripts.common.extension.LocationExtension,ru.craftlogic.scripts.common.extension.BlockStateExtension
+staticExtensionClasses=
