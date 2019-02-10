@@ -50,7 +50,7 @@ public class GroupManager extends ConfigurableManager {
             if (parentName.equals(groupName) && !groupName.equals(defaultGroupName)) {
                 getLogger().error("Group '" + groupName + "' cannot be a child of itself!");
             }
-            List<String> permissions = new ArrayList<>();
+            Set<String> permissions = new HashSet<>();
             if (g.has("permissions")) {
                 JsonArray p = g.getAsJsonArray("permissions");
                 for (JsonElement element : p) {
@@ -64,10 +64,8 @@ public class GroupManager extends ConfigurableManager {
                     metadata.put(e.getKey(), e.getValue().getAsString());
                 }
             }
-            String prefix = g.has("prefix") ? g.get("prefix").getAsString() : null;
-            String suffix = g.has("suffix") ? g.get("suffix").getAsString() : null;
             int priority = g.has("priority") ? g.get("priority").getAsInt() : 0;
-            this.groups.put(groupName, new Group(groupName, parentName, permissions, metadata, prefix, suffix, priority));
+            this.groups.put(groupName, new Group(groupName, parentName, permissions, metadata, priority));
         }
         groupCache.clear();
     }
@@ -95,12 +93,6 @@ public class GroupManager extends ConfigurableManager {
                 }
                 group.add("metadata", metadata);
             }
-            if (g.prefix != null) {
-                group.addProperty("prefix", g.prefix);
-            }
-            if (g.suffix != null) {
-                group.addProperty("suffix", g.suffix);
-            }
             if (g.priority != 0) {
                 group.addProperty("priority", g.priority);
             }
@@ -110,18 +102,15 @@ public class GroupManager extends ConfigurableManager {
 
     public class Group implements Comparable<Group> {
         final String name, parent;
-        final List<String> permissions;
+        final Set<String> permissions;
         final Map<String, String> metadata;
-        String prefix, suffix;
         int priority;
 
-        public Group(String name, String parent, List<String> permissions, Map<String, String> metadata, String prefix, String suffix, int priority) {
+        public Group(String name, String parent, Set<String> permissions, Map<String, String> metadata, int priority) {
             this.name = name;
             this.parent = parent;
             this.permissions = permissions;
             this.metadata = metadata;
-            this.prefix = prefix;
-            this.suffix = suffix;
             this.priority = priority;
         }
 
@@ -135,32 +124,6 @@ public class GroupManager extends ConfigurableManager {
                 return null;
             } else {
                 return parent;
-            }
-        }
-
-        public String prefix() {
-            if (this.prefix != null) {
-                return this.prefix;
-            } else {
-                Group parent = this.parent();
-                if (parent == null) {
-                    return "";
-                } else {
-                    return parent.prefix();
-                }
-            }
-        }
-
-        public String suffix() {
-            if (this.suffix != null) {
-                return this.suffix;
-            } else {
-                Group parent = this.parent();
-                if (parent == null) {
-                    return "";
-                } else {
-                    return parent.prefix();
-                }
             }
         }
 

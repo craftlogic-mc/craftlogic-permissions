@@ -17,9 +17,10 @@ public class PermissionCommands implements CommandRegistrar {
         "group <group:PermGroup> permissions",
         "group <group:PermGroup> metadata set <key> <value>...",
         "group <group:PermGroup> metadata unset <key>",
+        "group <group:PermGroup> metadata <key>",
         "group <group:PermGroup> metadata",
-        "group <group:PermGroup> [create|prefix|suffix] <value>...",
-        "group <group:PermGroup> [create|delete|prefix|suffix|users]",
+        "group <group:PermGroup> [create] <value>...",
+        "group <group:PermGroup> [create|delete|users]",
         "group <group:PermGroup>",
         "user <username:OfflinePlayer> groups [add|delete] <value>...",
         "user <username:OfflinePlayer> groups",
@@ -27,9 +28,8 @@ public class PermissionCommands implements CommandRegistrar {
         "user <username:OfflinePlayer> permissions",
         "user <username:OfflinePlayer> metadata set <key> <value>...",
         "user <username:OfflinePlayer> metadata unset <key>",
+        "user <username:OfflinePlayer> metadata <key>",
         "user <username:OfflinePlayer> metadata",
-        "user <username:OfflinePlayer> [prefix|suffix] <value>...",
-        "user <username:OfflinePlayer> [prefix|suffix]",
         "user <username:OfflinePlayer>"
     }, aliases = {"perms", "permission", "permissions"})
     public static void commandPerm(CommandContext ctx) throws Exception {
@@ -49,11 +49,17 @@ public class PermissionCommands implements CommandRegistrar {
                                     case "add": {
                                         boolean added = group.permissions.add(perm);
                                         ctx.sendMessage("commands.perm.group.permissions.add." + (added ? "success" : "unable"), perm, groupName);
+                                        if (added) {
+                                            permissionManager.save(true);
+                                        }
                                         break;
                                     }
                                     case "delete": {
                                         boolean deleted = group.permissions.remove(perm);
                                         ctx.sendMessage("commands.perm.group.permissions.delete." + (deleted ? "success" : "unable"), perm, groupName);
+                                        if (deleted) {
+                                            permissionManager.save(true);
+                                        }
                                         break;
                                     }
                                 }
@@ -70,11 +76,17 @@ public class PermissionCommands implements CommandRegistrar {
                                         String value = ctx.get("value").asString();
                                         boolean updated = group.metadata.put(key, value) == null;
                                         ctx.sendMessage("commands.perm.group.metadata.set." + (updated ? "success" : "unable"), key, value, groupName);
+                                        if (updated) {
+                                            permissionManager.save(true);
+                                        }
                                         break;
                                     }
                                     case "unset": {
                                         boolean deleted = group.metadata.remove(key) != null;
                                         ctx.sendMessage("commands.perm.group.metadata.unset." + (deleted ? "success" : "unable"), key, groupName);
+                                        if (deleted) {
+                                            permissionManager.save(true);
+                                        }
                                         break;
                                     }
                                 }
@@ -106,47 +118,11 @@ public class PermissionCommands implements CommandRegistrar {
                                 if (groupName.equals(defaultGroupName)) {
                                     throw new CommandException("commands.perm.group.delete.unable", groupName);
                                 } else {
-                                    permissionManager.groupManager.groups.remove(groupName, group);
-                                    permissionManager.save(true);
+                                    boolean removed = permissionManager.groupManager.groups.remove(groupName, group);
+                                    if (removed) {
+                                        permissionManager.save(true);
+                                    }
                                     ctx.sendMessage("commands.perm.group.delete.success", groupName);
-                                }
-                                break;
-                            }
-                            case "prefix": {
-                                if (group == null) {
-                                    throw new CommandException("commands.perm.group.notFound", groupName);
-                                }
-                                if (!ctx.has("value")) {
-                                    ctx.sendMessage("commands.perm.info.group.exact.prefix", groupName, group.prefix());
-                                } else {
-                                    String prefix = ctx.get("value").asString();
-                                    if (prefix.equals("\"\"")) {
-                                        group.prefix = "";
-                                        ctx.sendMessage("commands.perm.info.group.exact.prefix.reset", groupName);
-                                    } else {
-                                        ctx.sendMessage("commands.perm.info.group.exact.prefix.set", groupName, prefix);
-                                        group.prefix = prefix;
-                                    }
-                                    permissionManager.save(true);
-                                }
-                                break;
-                            }
-                            case "suffix": {
-                                if (group == null) {
-                                    throw new CommandException("commands.perm.group.notFound", groupName);
-                                }
-                                if (!ctx.has("value")) {
-                                    ctx.sendMessage("commands.perm.info.group.exact.suffix", groupName, group.suffix());
-                                } else {
-                                    String suffix = ctx.get("value").asString();
-                                    if (suffix.equals("\"\"")) {
-                                        group.suffix = "";
-                                        ctx.sendMessage("commands.perm.info.group.exact.suffix.reset", groupName);
-                                    } else {
-                                        ctx.sendMessage("commands.perm.info.group.exact.suffix.set", groupName, suffix);
-                                        group.suffix = suffix;
-                                    }
-                                    permissionManager.save(true);
                                 }
                                 break;
                             }
@@ -202,11 +178,17 @@ public class PermissionCommands implements CommandRegistrar {
                                             case "add": {
                                                 boolean added = user.groups.add(group);
                                                 ctx.sendMessage("commands.perm.user.groups.add." + (added ? "success" : "unable"), groupName, username);
+                                                if (added) {
+                                                    permissionManager.save(true);
+                                                }
                                                 break;
                                             }
                                             case "delete": {
                                                 boolean deleted = user.groups.remove(group);
                                                 ctx.sendMessage("commands.perm.user.groups.delete." + (deleted ? "success" : "unable"), groupName, username);
+                                                if (deleted) {
+                                                    permissionManager.save(true);
+                                                }
                                                 break;
                                             }
                                         }
@@ -225,11 +207,17 @@ public class PermissionCommands implements CommandRegistrar {
                                         case "add": {
                                             boolean added = user.permissions.add(perm);
                                             ctx.sendMessage("commands.perm.user.permissions.add." + (added ? "success" : "unable"), perm, username);
+                                            if (added) {
+                                                permissionManager.save(true);
+                                            }
                                             break;
                                         }
                                         case "delete": {
                                             boolean deleted = user.permissions.remove(perm);
                                             ctx.sendMessage("commands.perm.user.permissions.delete." + (deleted ? "success" : "unable"), perm, user);
+                                            if (deleted) {
+                                                permissionManager.save(true);
+                                            }
                                             break;
                                         }
                                     }
@@ -246,51 +234,23 @@ public class PermissionCommands implements CommandRegistrar {
                                             String value = ctx.get("value").asString();
                                             boolean updated = user.metadata.put(key, value) == null;
                                             ctx.sendMessage("commands.perm.user.metadata.set." + (updated ? "success" : "unable"), key, value, player.getName());
+                                            if (updated) {
+                                                permissionManager.save(true);
+                                            }
                                             break;
                                         }
                                         case "unset": {
                                             boolean deleted = user.metadata.remove(key) != null;
                                             ctx.sendMessage("commands.perm.user.metadata.unset." + (deleted ? "success" : "unable"), key, player.getName());
+                                            if (deleted) {
+                                                permissionManager.save(true);
+                                            }
                                             break;
                                         }
                                     }
                                 } else {
                                     sendMetadata(user, player.getName(), ctx);
                                 }
-                            }
-                        }
-                    } else if (ctx.hasAction()) {
-                        switch (ctx.action()) {
-                            case "prefix": {
-                                if (!ctx.has("value")) {
-                                    ctx.sendMessage("commands.perm.info.user.exact.prefix", username, user.prefix());
-                                } else {
-                                    String prefix = ctx.get("value").asString();
-                                    if (prefix.equals("\"\"")) {
-                                        user.prefix = "";
-                                        ctx.sendMessage("commands.perm.info.user.exact.prefix.reset", username);
-                                    } else {
-                                        user.prefix = prefix;
-                                        ctx.sendMessage("commands.perm.info.user.exact.prefix.set", username, prefix);
-                                    }
-                                }
-                                break;
-                            }
-                            case "suffix": {
-                                if (!ctx.has("value")) {
-                                    ctx.sendMessage("commands.perm.info.user.exact.suffix", username, user.suffix());
-                                } else {
-                                    String suffix = ctx.get("value").asString();
-                                    if (suffix.equals("\"\"")) {
-                                        user.suffix = "";
-                                        ctx.sendMessage("commands.perm.info.user.exact.suffix.reset", username);
-                                    } else {
-                                        user.suffix = suffix;
-                                        ctx.sendMessage("commands.perm.info.user.exact.suffix.set", username, suffix);
-                                    }
-                                    permissionManager.save(true);
-                                }
-                                break;
                             }
                         }
                     } else {
@@ -310,14 +270,6 @@ public class PermissionCommands implements CommandRegistrar {
                 .gray()
                 .arg(username, Text::darkGray)
         );
-        ctx.sendMessage(
-            Text.translation("commands.perm.info.user.prefix")
-                .arg(user.prefix())
-        );
-        ctx.sendMessage(
-            Text.translation("commands.perm.info.user.suffix")
-                .arg(user.suffix())
-        );
         sendGroups(user, username, ctx);
     }
 
@@ -334,14 +286,6 @@ public class PermissionCommands implements CommandRegistrar {
                     .arg(parent.name(), Text::darkGray)
             );
         }
-        ctx.sendMessage(
-            Text.translation("commands.perm.info.group.prefix")
-                .arg(group.prefix())
-        );
-        ctx.sendMessage(
-            Text.translation("commands.perm.info.group.suffix")
-                .arg(group.suffix())
-        );
         sendPermissions(group, ctx);
     }
 
@@ -440,7 +384,7 @@ public class PermissionCommands implements CommandRegistrar {
                 }
             }
         }
-        Group group = permissionManager.groupManager.new Group(groupName, parent, new ArrayList<>(), new HashMap<>(), null, null, priority);
+        Group group = permissionManager.groupManager.new Group(groupName, parent, new HashSet<>(), new HashMap<>(), priority);
         permissionManager.groupManager.groups.put(groupName, group);
         permissionManager.save(true);
         ctx.sendMessage("commands.perm.group.create.success", groupName);

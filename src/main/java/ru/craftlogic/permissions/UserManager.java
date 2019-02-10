@@ -29,7 +29,7 @@ public class UserManager extends ConfigurableManager {
                 continue;
             }
             JsonObject u = (JsonObject) entry.getValue();
-            List<String> permissions = new ArrayList<>();
+            Set<String> permissions = new HashSet<>();
             if (u.has("permissions")) {
                 for (JsonElement element : u.getAsJsonArray("permissions")) {
                     permissions.add(element.getAsString());
@@ -41,7 +41,7 @@ public class UserManager extends ConfigurableManager {
                     metadata.put(e.getKey(), e.getValue().getAsString());
                 }
             }
-            List<Group> groups = new ArrayList<>();
+            Set<Group> groups = new HashSet<>();
 
             if (u.has("groups")) {
                 for (JsonElement group : u.getAsJsonArray("groups")) {
@@ -53,9 +53,7 @@ public class UserManager extends ConfigurableManager {
                     groups.add(this.permissionManager.groupManager.groups.get(groupName));
                 }
             }
-            String prefix = u.has("prefix") ? u.get("prefix").getAsString() : null;
-            String suffix = u.has("suffix") ? u.get("suffix").getAsString() : null;
-            User user = new User(id, groups, permissions, metadata, prefix, suffix);
+            User user = new User(id, groups, permissions, metadata);
             this.users.put(id, user);
             for (Group group : groups) {
                 this.permissionManager.groupManager.groupUsersCache.computeIfAbsent(group, k -> new ArrayList<>()).add(user);
@@ -89,12 +87,6 @@ public class UserManager extends ConfigurableManager {
                 }
                 user.add("groups", groups);
             }
-            if (u.prefix != null) {
-                user.addProperty("prefix", u.prefix);
-            }
-            if (u.suffix != null) {
-                user.addProperty("suffix", u.suffix);
-            }
             if (user.size() > 0) {
                 users.add(entry.getKey().toString(), user);
             }
@@ -120,22 +112,19 @@ public class UserManager extends ConfigurableManager {
 
     public class User {
         final UUID id;
-        final List<Group> groups;
-        final List<String> permissions;
+        final Set<Group> groups;
+        final Set<String> permissions;
         final Map<String, String> metadata;
-        String prefix, suffix;
 
         User(UUID id) {
-            this(id, new ArrayList<>(), new ArrayList<>(), new HashMap<>(), null, null);
+            this(id, new HashSet<>(), new HashSet<>(), new HashMap<>());
         }
 
-        public User(UUID id, List<Group> groups, List<String> permissions, Map<String, String> metadata, String prefix, String suffix) {
+        public User(UUID id, Set<Group> groups, Set<String> permissions, Map<String, String> metadata) {
             this.id = id;
             this.groups = groups;
             this.permissions = permissions;
             this.metadata = metadata;
-            this.prefix = prefix;
-            this.suffix = suffix;
         }
 
         public UUID id() {
@@ -168,44 +157,6 @@ public class UserManager extends ConfigurableManager {
                 }
             }
             return metadata;
-        }
-
-        public String prefix() {
-            if (this.prefix != null) {
-                return this.prefix;
-            } else {
-                Map<Integer, String> prefixes = new TreeMap<>();
-                for (Group group : this.groups) {
-                    String prefix = group.prefix();
-                    if (prefix != null && !prefix.isEmpty()) {
-                        prefixes.put(group.priority, prefix);
-                    }
-                }
-                if (!prefixes.isEmpty()) {
-                    return prefixes.get(0);
-                } else {
-                    return "";
-                }
-            }
-        }
-
-        public String suffix() {
-            if (this.suffix != null) {
-                return this.suffix;
-            } else {
-                Map<Integer, String> suffixes = new TreeMap<>();
-                for (Group group : this.groups) {
-                    String suffix = group.suffix();
-                    if (suffix != null && !suffix.isEmpty()) {
-                        suffixes.put(group.priority, suffix);
-                    }
-                }
-                if (!suffixes.isEmpty()) {
-                    return suffixes.get(0);
-                } else {
-                    return "";
-                }
-            }
         }
 
         public boolean hasPermissions(String... permissions) {
