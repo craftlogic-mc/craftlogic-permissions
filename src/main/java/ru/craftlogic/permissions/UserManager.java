@@ -41,22 +41,36 @@ public class UserManager extends ConfigurableManager {
                     metadata.put(e.getKey(), e.getValue().getAsString());
                 }
             }
-            Set<Group> groups = new HashSet<>();
+            Map<Group, Long> groups = new HashMap<>();
 
             if (u.has("groups")) {
-                for (JsonElement group : u.getAsJsonArray("groups")) {
-                    String groupName = group.getAsString();
-                    if (!this.permissionManager.groupManager.groups.containsKey(groupName)) {
-                        getLogger().error("User '" + id + "' is a member of an unknown group named '" + groupName + "' Ignoring it...");
-                        continue;
+                if (u.get("groups").isJsonArray()) {
+                    for (JsonElement group : u.getAsJsonArray("groups")) {
+                        String groupName = group.getAsString();
+                        if (!this.permissionManager.groupManager.groups.containsKey(groupName)) {
+                            getLogger().error("User '" + id + "' is a member of an unknown group named '" + groupName + "' Ignoring it...");
+                            continue;
+                        }
+                        groups.put(this.permissionManager.groupManager.groups.get(groupName), null);
                     }
-                    groups.add(this.permissionManager.groupManager.groups.get(groupName));
+                } else {
+                    for (Map.Entry<String, JsonElement> e : u.getAsJsonObject("groups").entrySet()) {
+                        String groupName = e.getKey();
+                        Long expiration = e.getValue() == null ? null : e.getValue().getAsLong();
+                        if (!this.permissionManager.groupManager.groups.containsKey(groupName)) {
+                            getLogger().error("User '" + id + "' is a member of an unknown group named '" + groupName + "' Ignoring it...");
+                            continue;
+                        }
+                        groups.put(this.permissionManager.groupManager.groups.get(groupName), expiration);
+                    }
                 }
             }
             User user = new User(id, groups, permissions, metadata);
             this.users.put(id, user);
-            for (Group group : groups) {
-                this.permissionManager.groupManager.groupUsersCache.computeIfAbsent(group, k -> new ArrayList<>()).add(user);
+            for (Map.Entry<Group, Long> e : groups.entrySet()) {
+                Group group = e.getKey();
+                Long expiration = e.getValue();
+                this.permissionManager.groupManager.groupUsersCache.computeIfAbsent(group, k -> new HashMap<>()).put(user, expiration);
             }
         }
     }
@@ -81,9 +95,16 @@ public class UserManager extends ConfigurableManager {
                 user.add("metadata", metadata);
             }
             if (!u.groups.isEmpty()) {
-                JsonArray groups = new JsonArray();
-                for (Group group : u.groups) {
-                    groups.add(new JsonPrimitive(group.name));
+                JsonObject groups = new JsonObject();
+                for (Iterator<Map.Entry<Group, Long>> iterator = u.groups.entrySet().iterator(); iterator.hasNext(); ) {
+                    Map.Entry<Group, Long> e = iterator.next();
+                    Group group = e.getKey();
+                    Long expiration = e.getValue();
+                    if (expiration == null || expiration < System.currentTimeMillis()) {
+                        groups.add(group.name, new JsonPrimitive(expiration));
+                    } else {
+                        iterator.remove();
+                    }
                 }
                 user.add("groups", groups);
             }
@@ -93,15 +114,15 @@ public class UserManager extends ConfigurableManager {
         }
     }
 
-    public Collection<Group> getGroups(UUID id) {
-        Set<Group> groups = new HashSet<>();
+    public Map<Group, Long> getGroups(UUID id) {
+        Map<Group, Long> groups = new HashMap<>();
         Group defaultGroup = this.permissionManager.getDefaultGroup();
         if (defaultGroup != null) {
-            groups.add(defaultGroup);
+            groups.put(defaultGroup, null);
         }
         User user = this.users.get(id);
         if (user != null) {
-            groups.addAll(user.groups);
+            groups.putAll(user.groups);
         }
         return groups;
     }
@@ -112,15 +133,15 @@ public class UserManager extends ConfigurableManager {
 
     public class User {
         final UUID id;
-        final Set<Group> groups;
+        final Map<Group, Long> groups;
         final Set<String> permissions;
         final Map<String, String> metadata;
 
         User(UUID id) {
-            this(id, new HashSet<>(), new HashSet<>(), new HashMap<>());
+            this(id, new HashMap<>(), new HashSet<>(), new HashMap<>());
         }
 
-        public User(UUID id, Set<Group> groups, Set<String> permissions, Map<String, String> metadata) {
+        public User(UUID id, Map<Group, Long> groups, Set<String> permissions, Map<String, String> metadata) {
             this.id = id;
             this.groups = groups;
             this.permissions = permissions;
@@ -138,9 +159,15 @@ public class UserManager extends ConfigurableManager {
                 if (defaultGroup != null) {
                     permissions.addAll(defaultGroup.permissions(true));
                 }
-                for (Group group : this.groups) {
-                    permissions.addAll(group.permissions(true));
+                for (Iterator<Map.Entry<Group, Long>> iterator = this.groups.entrySet().iterator(); iterator.hasNext(); ) {
+                    Map.Entry<Group, Long> entry = iterator.next();
+                    if (entry.getValue() == null || entry.getValue() < System.currentTimeMillis()) {
+                        permissions.addAll(entry.getKey().permissions(true));
+                    } else {
+                        iterator.remove();
+                    }
                 }
+
             }
             return permissions;
         }
@@ -152,8 +179,13 @@ public class UserManager extends ConfigurableManager {
                 if (defaultGroup != null) {
                     metadata.putAll(defaultGroup.metadata(true));
                 }
-                for (Group group : this.groups) {
-                    metadata.putAll(group.metadata(true));
+                for (Iterator<Map.Entry<Group, Long>> iterator = this.groups.entrySet().iterator(); iterator.hasNext(); ) {
+                    Map.Entry<Group, Long> entry = iterator.next();
+                    if (entry.getValue() == null || entry.getValue() < System.currentTimeMillis()) {
+                        metadata.putAll(entry.getKey().metadata(true));
+                    } else {
+                        iterator.remove();
+                    }
                 }
             }
             return metadata;

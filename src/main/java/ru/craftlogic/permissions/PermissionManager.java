@@ -112,11 +112,11 @@ public class PermissionManager extends ConfigurableManager implements ru.craftlo
         return ImmutableSet.copyOf(this.groupManager.groups.keySet());
     }
 
-    public Collection<Group> getGroups(OfflinePlayer player) {
+    public Map<Group, Long> getGroups(OfflinePlayer player) {
         return this.getGroups(player.getId());
     }
 
-    public Collection<Group> getGroups(UUID id) {
+    public Map<Group, Long> getGroups(UUID id) {
         return this.userManager.getGroups(id);
     }
 

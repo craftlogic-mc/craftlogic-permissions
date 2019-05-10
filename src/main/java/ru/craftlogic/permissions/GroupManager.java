@@ -13,7 +13,7 @@ import java.util.*;
 public class GroupManager extends ConfigurableManager {
     private final PermissionManager permissionManager;
     final Map<String, Group> groups = new HashMap<>();
-    final Map<Group, List<UserManager.User>> groupUsersCache = new HashMap<>();
+    final Map<Group, Map<UserManager.User, Long>> groupUsersCache = new HashMap<>();
 
     public GroupManager(PermissionManager permissionManager, Path configPath, Logger logger) {
         super(permissionManager.getServer(), configPath, logger);
@@ -149,12 +149,12 @@ public class GroupManager extends ConfigurableManager {
             return metadata;
         }
 
-        public Set<UserManager.User> users() {
-            Set<UserManager.User> result = new HashSet<>();
+        public Map<UserManager.User, Long> users() {
+            Map<UserManager.User, Long> result = new HashMap<>();
             if (!this.name.equals(GroupManager.this.permissionManager.getDefaultGroupName())) {
-                List<UserManager.User> cachedUsers = GroupManager.this.groupUsersCache.get(this);
+                Map<UserManager.User, Long> cachedUsers = GroupManager.this.groupUsersCache.get(this);
                 if (cachedUsers != null) {
-                    result.addAll(cachedUsers);
+                    result.putAll(cachedUsers);
                 }
             }
             return result;
