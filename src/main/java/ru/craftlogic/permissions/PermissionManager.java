@@ -12,6 +12,7 @@ import ru.craftlogic.api.world.OfflinePlayer;
 import ru.craftlogic.common.command.CommandManager;
 import ru.craftlogic.permissions.GroupManager.Group;
 import ru.craftlogic.permissions.UserManager.User;
+import ru.craftlogic.permissions.common.commands.CommandPermission;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -22,8 +23,8 @@ public class PermissionManager extends ConfigurableManager implements ru.craftlo
 
     private final Path configFile;
     private boolean enabled;
-    final UserManager userManager;
-    final GroupManager groupManager;
+    public final UserManager userManager;
+    public final GroupManager groupManager;
 
     public PermissionManager(Server server, Path settingsDirectory) {
         super(server, settingsDirectory.resolve("permissions.json"), LOGGER);
@@ -54,7 +55,10 @@ public class PermissionManager extends ConfigurableManager implements ru.craftlo
 
     @Override
     public void registerCommands(CommandManager commandManager) {
-        commandManager.registerCommandContainer(PermissionCommands.class);
+        commandManager.registerArgumentType("PermGroup", false, ctx ->
+            ((PermissionManager)ctx.server().getPermissionManager()).getAllGroups()
+        );
+        commandManager.registerCommand(new CommandPermission());
     }
 
     @Override

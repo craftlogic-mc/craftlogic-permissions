@@ -1,48 +1,55 @@
-package ru.craftlogic.permissions;
+package ru.craftlogic.permissions.common.commands;
 
 import net.minecraft.command.CommandException;
 import net.minecraft.command.WrongUsageException;
-import ru.craftlogic.api.command.*;
+import ru.craftlogic.api.command.CommandBase;
+import ru.craftlogic.api.command.CommandContext;
 import ru.craftlogic.api.server.PlayerManager;
 import ru.craftlogic.api.text.Text;
 import ru.craftlogic.api.world.OfflinePlayer;
-import ru.craftlogic.permissions.GroupManager.Group;
-import ru.craftlogic.permissions.UserManager.User;
+import ru.craftlogic.permissions.GroupManager;
+import ru.craftlogic.permissions.PermissionManager;
+import ru.craftlogic.permissions.UserManager;
 
 import java.util.*;
 
 import static ru.craftlogic.api.CraftMessages.parseDuration;
 
-public class PermissionCommands implements CommandRegistrar {
-    @Command(name = "perm", syntax = {
-        "group <group:PermGroup> permissions add|delete <value>",
-        "group <group:PermGroup> permissions",
-        "group <group:PermGroup> metadata set <key> <value>...",
-        "group <group:PermGroup> metadata unset <key>",
-        "group <group:PermGroup> metadata <key>",
-        "group <group:PermGroup> metadata",
-        "group <group:PermGroup> create <value>...",
-        "group <group:PermGroup> create|delete|users",
-        "group <group:PermGroup>",
-        "user <username:OfflinePlayer> groups add|delete <value>",
-        "user <username:OfflinePlayer> groups add|delete <value> <expiration>",
-        "user <username:OfflinePlayer> groups",
-        "user <username:OfflinePlayer> permissions add|delete <value>",
-        "user <username:OfflinePlayer> permissions",
-        "user <username:OfflinePlayer> metadata set <key> <value>...",
-        "user <username:OfflinePlayer> metadata unset <key>",
-        "user <username:OfflinePlayer> metadata <key>",
-        "user <username:OfflinePlayer> metadata",
-        "user <username:OfflinePlayer>"
-    }, aliases = {"perms", "permission", "permissions"})
-    public static void commandPerm(CommandContext ctx) throws Exception {
+public class CommandPermission extends CommandBase {
+    public CommandPermission() {
+        super("perm", 4,
+            "group <group:PermGroup> permissions add|delete <value>",
+            "group <group:PermGroup> permissions",
+            "group <group:PermGroup> metadata set <key> <value>...",
+            "group <group:PermGroup> metadata unset <key>",
+            "group <group:PermGroup> metadata <key>",
+            "group <group:PermGroup> metadata",
+            "group <group:PermGroup> create <value>...",
+            "group <group:PermGroup> create|delete|users",
+            "group <group:PermGroup>",
+            "user <username:OfflinePlayer> groups add|delete <value>",
+            "user <username:OfflinePlayer> groups add|delete <value> <expiration>",
+            "user <username:OfflinePlayer> groups",
+            "user <username:OfflinePlayer> permissions add|delete <value>",
+            "user <username:OfflinePlayer> permissions",
+            "user <username:OfflinePlayer> metadata set <key> <value>...",
+            "user <username:OfflinePlayer> metadata unset <key>",
+            "user <username:OfflinePlayer> metadata <key>",
+            "user <username:OfflinePlayer> metadata",
+            "user <username:OfflinePlayer>"
+        );
+        Collections.addAll(aliases, "perms", "permissions", "permission");
+    }
+
+    @Override
+    protected void execute(CommandContext ctx) throws Throwable {
         PermissionManager permissionManager = (PermissionManager) ctx.server().getPermissionManager();
         String defaultGroupName = permissionManager.getDefaultGroupName();
         PlayerManager playerManager = ctx.server().getPlayerManager();
         switch (ctx.action(0)) {
             case "group": {
                 String groupName = ctx.get("group").asString();
-                Group group = permissionManager.getGroup(groupName);
+                GroupManager.Group group = permissionManager.getGroup(groupName);
                 if (ctx.hasAction(1)) {
                     switch (ctx.action(1)) {
                         case "permissions": {
@@ -134,8 +141,8 @@ public class PermissionCommands implements CommandRegistrar {
                                 ctx.sendMessage("commands.perm.info.group.members.everyone");
                             } else {
                                 List<String> users = new ArrayList<>();
-                                for (Map.Entry<User, Long> e : group.users().entrySet()) {
-                                    User user = e.getKey();
+                                for (Map.Entry<UserManager.User, Long> e : group.users().entrySet()) {
+                                    UserManager.User user = e.getKey();
                                     Long expiration = e.getValue();
                                     UUID id = user.id();
                                     OfflinePlayer p = playerManager.getOffline(id);
@@ -178,14 +185,14 @@ public class PermissionCommands implements CommandRegistrar {
                     } catch (IllegalArgumentException ignored) {}
                 }
                 if (player != null) {
-                    User user = permissionManager.getUser(player);
+                    UserManager.User user = permissionManager.getUser(player);
                     if (ctx.hasAction(1)) {
                         switch (ctx.action(1)) {
                             case "groups": {
                                 if (ctx.has("value")) {
                                     String groupName = ctx.get("value").asString();
                                     Long expiration = ctx.getIfPresent("expiration", CommandContext.Argument::asDuration).orElse(null);
-                                    Group group = permissionManager.getGroup(groupName);
+                                    GroupManager.Group group = permissionManager.getGroup(groupName);
                                     if (group != null) {
                                         switch (ctx.action(2)) {
                                             case "add": {
@@ -283,7 +290,7 @@ public class PermissionCommands implements CommandRegistrar {
         }
     }
 
-    private static void sendUserInfo(CommandContext ctx, String username, User user) {
+    private void sendUserInfo(CommandContext ctx, String username, UserManager.User user) {
         ctx.sendMessage(
             Text.translation("commands.perm.info.user.header")
                 .gray()
@@ -292,8 +299,8 @@ public class PermissionCommands implements CommandRegistrar {
         sendGroups(user, username, ctx);
     }
 
-    private static void sendGroupInfo(CommandContext ctx, Group group) {
-        Group parent = group.parent();
+    private void sendGroupInfo(CommandContext ctx, GroupManager.Group group) {
+        GroupManager.Group parent = group.parent();
         ctx.sendMessage(
             Text.translation("commands.perm.info.group.header")
                 .gray()
@@ -308,7 +315,7 @@ public class PermissionCommands implements CommandRegistrar {
         sendPermissions(group, ctx);
     }
 
-    private static void sendPermissions(User user, String username, CommandContext ctx) {
+    private void sendPermissions(UserManager.User user, String username, CommandContext ctx) {
         ctx.sendMessage(
             Text.string("/").gray()
                 .appendTranslate("commands.perm.info.permissions", Text::gray)
@@ -324,7 +331,7 @@ public class PermissionCommands implements CommandRegistrar {
         }
     }
 
-    private static void sendMetadata(User user, String username, CommandContext ctx) {
+    private void sendMetadata(UserManager.User user, String username, CommandContext ctx) {
         ctx.sendMessage(
             Text.string("/").gray()
                 .appendTranslate("commands.perm.info.metadata", Text::gray)
@@ -340,7 +347,7 @@ public class PermissionCommands implements CommandRegistrar {
         }
     }
 
-    private static void sendPermissions(Group group, CommandContext ctx) {
+    private void sendPermissions(GroupManager.Group group, CommandContext ctx) {
         ctx.sendMessage(
             Text.string("/").gray()
                 .appendTranslate("commands.perm.info.permissions", Text::gray)
@@ -356,7 +363,7 @@ public class PermissionCommands implements CommandRegistrar {
         }
     }
 
-    private static void sendMetadata(Group group, CommandContext ctx) {
+    private void sendMetadata(GroupManager.Group group, CommandContext ctx) {
         ctx.sendMessage(
             Text.string("/").gray()
                 .appendTranslate("commands.perm.info.metadata", Text::gray)
@@ -372,11 +379,11 @@ public class PermissionCommands implements CommandRegistrar {
         }
     }
 
-    private static void sendGroups(User user, String username, CommandContext ctx) {
+    private void sendGroups(UserManager.User user, String username, CommandContext ctx) {
         ctx.sendMessage("commands.perm.info.user.groups");
 
-        for (Map.Entry<Group, Long> e : user.groups.entrySet()) {
-            Group g = e.getKey();
+        for (Map.Entry<GroupManager.Group, Long> e : user.groups.entrySet()) {
+            GroupManager.Group g = e.getKey();
             Long exp = e.getValue();
             ctx.sendMessage(
                 Text.string("- ")
@@ -387,7 +394,7 @@ public class PermissionCommands implements CommandRegistrar {
         }
     }
 
-    private static void createGroup(PermissionManager permissionManager, CommandContext ctx, String groupName) throws Exception {
+    private void createGroup(PermissionManager permissionManager, CommandContext ctx, String groupName) throws Exception {
         int priority = 0;
         String parent = permissionManager.getDefaultGroupName();
         if (ctx.has("value")) {
@@ -405,14 +412,9 @@ public class PermissionCommands implements CommandRegistrar {
                 }
             }
         }
-        Group group = permissionManager.groupManager.new Group(groupName, parent, new HashSet<>(), new HashMap<>(), priority);
+        GroupManager.Group group = permissionManager.groupManager.new Group(groupName, parent, new HashSet<>(), new HashMap<>(), priority);
         permissionManager.groupManager.groups.put(groupName, group);
         permissionManager.save(true);
         ctx.sendMessage("commands.perm.group.create.success", groupName);
-    }
-
-    @ArgumentCompleter(type = "PermGroup")
-    public static Set<String> completerPermGroup(ArgumentCompletionContext ctx) {
-        return ((PermissionManager)ctx.server().getPermissionManager()).getAllGroups();
     }
 }

@@ -132,10 +132,10 @@ public class UserManager extends ConfigurableManager {
     }
 
     public class User {
-        final UUID id;
-        final Map<Group, Long> groups;
-        final Set<String> permissions;
-        final Map<String, String> metadata;
+        public final UUID id;
+        public final Map<Group, Long> groups;
+        public final Set<String> permissions;
+        public final Map<String, String> metadata;
 
         User(UUID id) {
             this(id, new HashMap<>(), new HashSet<>(), new HashMap<>());

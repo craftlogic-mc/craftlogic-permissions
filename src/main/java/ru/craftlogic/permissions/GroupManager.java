@@ -11,9 +11,9 @@ import java.nio.file.Path;
 import java.util.*;
 
 public class GroupManager extends ConfigurableManager {
-    private final PermissionManager permissionManager;
-    final Map<String, Group> groups = new HashMap<>();
-    final Map<Group, Map<UserManager.User, Long>> groupUsersCache = new HashMap<>();
+    public final PermissionManager permissionManager;
+    public final Map<String, Group> groups = new HashMap<>();
+    public final Map<Group, Map<UserManager.User, Long>> groupUsersCache = new HashMap<>();
 
     public GroupManager(PermissionManager permissionManager, Path configPath, Logger logger) {
         super(permissionManager.getServer(), configPath, logger);
@@ -101,10 +101,10 @@ public class GroupManager extends ConfigurableManager {
     }
 
     public class Group implements Comparable<Group> {
-        final String name, parent;
-        final Set<String> permissions;
-        final Map<String, String> metadata;
-        int priority;
+        public final String name, parent;
+        public final Set<String> permissions;
+        public final Map<String, String> metadata;
+        public int priority;
 
         public Group(String name, String parent, Set<String> permissions, Map<String, String> metadata, int priority) {
             this.name = name;
