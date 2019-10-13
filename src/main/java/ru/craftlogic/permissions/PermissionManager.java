@@ -58,7 +58,9 @@ public class PermissionManager extends ConfigurableManager implements ru.craftlo
         commandManager.registerArgumentType("PermGroup", false, ctx ->
             ((PermissionManager)ctx.server().getPermissionManager()).getAllGroups()
         );
-        commandManager.registerCommand(new CommandPermission());
+        if (server.isDedicated()) {
+            commandManager.registerCommand(new CommandPermission());
+        }
     }
 
     @Override
