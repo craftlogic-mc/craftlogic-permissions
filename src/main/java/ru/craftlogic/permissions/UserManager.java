@@ -101,7 +101,7 @@ public class UserManager extends ConfigurableManager {
                     Group group = e.getKey();
                     Long expiration = e.getValue();
                     if (expiration == null || expiration < System.currentTimeMillis()) {
-                        groups.add(group.name, new JsonPrimitive(expiration));
+                        groups.add(group.name, expiration != null ? new JsonPrimitive(expiration) : null);
                     } else {
                         iterator.remove();
                     }
