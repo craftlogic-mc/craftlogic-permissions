@@ -46,6 +46,7 @@ public class CommandPermission extends CommandBase {
         PermissionManager permissionManager = (PermissionManager) ctx.server().getPermissionManager();
         String defaultGroupName = permissionManager.getDefaultGroupName();
         PlayerManager playerManager = ctx.server().getPlayerManager();
+        long current = System.currentTimeMillis();
         switch (ctx.action(0)) {
             case "group": {
                 String groupName = ctx.get("group").asString();
@@ -143,24 +144,20 @@ public class CommandPermission extends CommandBase {
                                 List<String> users = new ArrayList<>();
                                 for (Map.Entry<UserManager.User, Long> e : group.users().entrySet()) {
                                     UserManager.User user = e.getKey();
-                                    Long expiration = e.getValue();
+                                    long expiration = e.getValue();
                                     UUID id = user.id();
                                     OfflinePlayer p = playerManager.getOffline(id);
-                                    if (expiration != null) {
-                                        if (expiration < System.currentTimeMillis()) {
-                                            String suffix = ", expires in: " + parseDuration(System.currentTimeMillis() - expiration);
-                                            if (p != null && p.getName() != null) {
-                                                users.add(id.toString() + " (" + p.getName() + ")" + suffix);
-                                            } else {
-                                                users.add(id.toString() + suffix);
-                                            }
-                                        }
-                                    } else {
+                                    if (expiration > current) {
+                                        String suffix = ", expires in: " + parseDuration(expiration - current);
                                         if (p != null && p.getName() != null) {
-                                            users.add(id.toString() + " (" + p.getName() + ")");
+                                            users.add(id.toString() + " (" + p.getName() + ")" + suffix);
                                         } else {
-                                            users.add(id.toString());
+                                            users.add(id.toString() + suffix);
                                         }
+                                    } else if (p != null && p.getName() != null) {
+                                        users.add(id.toString() + " (" + p.getName() + ")");
+                                    } else {
+                                        users.add(id.toString());
                                     }
                                 }
                                 ctx.sendMessage("commands.perm.info.group.members", users.toString());
@@ -191,7 +188,8 @@ public class CommandPermission extends CommandBase {
                             case "groups": {
                                 if (ctx.has("value")) {
                                     String groupName = ctx.get("value").asString();
-                                    Long expiration = ctx.getIfPresent("expiration", CommandContext.Argument::asDuration).orElse(null);
+                                    long expiration = ctx.getIfPresent("expiration", arg -> arg.asDuration() + current)
+                                        .orElse(0L);
                                     GroupManager.Group group = permissionManager.getGroup(groupName);
                                     if (group != null) {
                                         switch (ctx.action(2)) {
@@ -384,10 +382,11 @@ public class CommandPermission extends CommandBase {
 
         for (Map.Entry<GroupManager.Group, Long> e : user.groups.entrySet()) {
             GroupManager.Group g = e.getKey();
-            Long exp = e.getValue();
+            long expiration = e.getValue();
+            long current = System.currentTimeMillis();;
             ctx.sendMessage(
                 Text.string("- ")
-                    .appendText(g.name + (exp != null ? " (expires in " + parseDuration(System.currentTimeMillis() - exp) + ")" : ""), d ->
+                    .appendText(g.name + (expiration > current ? " (expires in " + parseDuration(expiration - current) + ")" : ""), d ->
                         d.darkGray().suggestCommand("/perm user " + username + " groups delete " + g.name)
                     )
             );

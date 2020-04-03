@@ -25,12 +25,12 @@ public class GroupManager extends ConfigurableManager {
         String defaultGroupName = this.permissionManager.getDefaultGroupName();
         if (groups.size() == 0) {
             getLogger().warn("There's no groups to load! At all...");
-            this.setDirty(true);
+            setDirty(true);
         }
         if (!groups.has(defaultGroupName)) {
             getLogger().warn("Default group is missing! Creating empty one...");
             groups.add(defaultGroupName, new JsonObject());
-            this.setDirty(true);
+            setDirty(true);
         }
         Map<String, JsonObject> groupCache = new HashMap<>();
         for (Map.Entry<String, JsonElement> entry : groups.entrySet()) {
