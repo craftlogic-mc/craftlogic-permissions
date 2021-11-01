@@ -1,4 +1,4 @@
-commands.perm.usage=/perm group <название> <info|users|create|delete> - Управление группами ИЛИ /perm group <название> <addPerm|delPerm|setPrefix|setSuffix> [значение]...
+commands.perm.usage=/perm group <название> users|create|delete - Управление группами ИЛИ /perm group <название> permissions [add|delete] [значение]... ИЛИ /perm group <название> metadata set|unset|<ключ> [значение]...
 commands.perm.group.create.exists=Группа под названием '%s' уже существует!
 commands.perm.group.create.success=Группа '%s' успешно создана!
 commands.perm.group.delete.unable=Невозможно удалить группу '%s'!
@@ -10,7 +10,7 @@ commands.perm.info.permissions=Разрешения:
 commands.perm.info.metadata=Метаданные:
 commands.perm.info.group.members=Члены группы: %s
 commands.perm.info.group.members.everyone=Эта группа является группой по-умолчанию, а значит её членами являются абсолютно все игроки
-commands.perm.info.user.header=<- Информация о пользователе '%s' (%s) ->
+commands.perm.info.user.header=Информация о пользователе %s:
 commands.perm.info.user.groups=Группы:
 commands.perm.group.permissions.add.success=Разрешение '%s' успешно выдано группе '%s'
 commands.perm.group.permissions.add.unable=Разрешение '%s' уже и так присутствует у группы '%s'

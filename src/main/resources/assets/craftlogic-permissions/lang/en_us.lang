@@ -1,4 +1,4 @@
-commands.perm.usage=/perm group <name> <info|users|create|delete> OR /perm group <name> <addPerm|delPerm|setPrefix|setSuffix> <value...>
+commands.perm.usage=/perm group <name> users|create|delete - Group management OR /perm group <name> permissions [add|delete] [value]... ИЛИ /perm group <name> metadata set|unset|<key> [value]...
 commands.perm.group.create.exists=Group with name '%s' already exists!
 commands.perm.group.create.success=Successfully created new group named '%s'
 commands.perm.group.delete.unable=Unable to delete group '%s'!
@@ -10,7 +10,7 @@ commands.perm.info.permissions=Permissions:
 commands.perm.info.metadata=Metadata:
 commands.perm.info.group.members=Group members: %s
 commands.perm.info.group.members.everyone=This is a default group and every user is a member of it
-commands.perm.info.user.header=<- Information about user '%s' (%s) ->
+commands.perm.info.user.header=Information about user %s:
 commands.perm.info.user.groups=Groups:
 commands.perm.group.permissions.add.success=Successfully added permission '%s' to group '%s'
 commands.perm.group.permissions.add.unable=Permission '%s' is already granted to group '%s'

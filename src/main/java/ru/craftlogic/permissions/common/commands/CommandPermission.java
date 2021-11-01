@@ -238,7 +238,7 @@ public class CommandPermission extends CommandBase {
                                         }
                                         case "delete": {
                                             boolean deleted = user.permissions.remove(perm);
-                                            ctx.sendMessage("commands.perm.user.permissions.delete." + (deleted ? "success" : "unable"), perm, user);
+                                            ctx.sendMessage("commands.perm.user.permissions.delete." + (deleted ? "success" : "unable"), perm, username);
                                             if (deleted) {
                                                 permissionManager.save(true);
                                             }
