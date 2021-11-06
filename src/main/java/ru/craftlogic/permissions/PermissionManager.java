@@ -78,6 +78,13 @@ public class PermissionManager extends ConfigurableManager implements ru.craftlo
     }
 
     @Override
+    public void unload() throws Exception {
+        if (enabled) {
+            super.unload();
+        }
+    }
+
+    @Override
     protected void save(JsonObject config) {
         config.addProperty("enabled", this.enabled);
         if (this.enabled) {
