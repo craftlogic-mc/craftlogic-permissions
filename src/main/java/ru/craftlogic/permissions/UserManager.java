@@ -175,7 +175,7 @@ public class UserManager extends ConfigurableManager {
         }
 
         public Map<String, String> metadata(boolean inherit) {
-            Map<String, String> metadata = new HashMap<>(this.metadata);
+            Map<String, String> metadata = new HashMap<>();
             if (inherit) {
                 Group defaultGroup = UserManager.this.permissionManager.getDefaultGroup();
                 if (defaultGroup != null) {
@@ -190,6 +190,7 @@ public class UserManager extends ConfigurableManager {
                     }
                 }
             }
+            metadata.putAll(this.metadata);
             return metadata;
         }
 
