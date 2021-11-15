@@ -139,13 +139,14 @@ public class GroupManager extends ConfigurableManager {
         }
 
         public Map<String, String> metadata(boolean inherit) {
-            Map<String, String> metadata = new HashMap<>(this.metadata);
+            Map<String, String> metadata = new HashMap<>();
             if (inherit) {
                 Group parent = this.parent();
                 if (parent != null) {
                     metadata.putAll(parent.metadata(true));
                 }
             }
+            metadata.putAll(this.metadata);
             return metadata;
         }
 
