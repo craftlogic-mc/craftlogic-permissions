@@ -203,11 +203,15 @@ public class UserManager extends ConfigurableManager {
                 return true;
             }
             Set<String> ps = this.permissions(true);
+            for (String permission : permissions) {
+                if (ps.contains("-" + permission))
+                    return false;
+            }
             if (ps.contains("*")) {
                 return true;
             }
             for (String permission : permissions) {
-                if (!ps.contains(permission) || ps.contains("-" + permission))
+                if (!ps.contains(permission))
                     return false;
             }
             return true;
