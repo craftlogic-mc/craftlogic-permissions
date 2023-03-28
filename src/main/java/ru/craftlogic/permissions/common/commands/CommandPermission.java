@@ -11,6 +11,7 @@ import ru.craftlogic.permissions.GroupManager;
 import ru.craftlogic.permissions.PermissionManager;
 import ru.craftlogic.permissions.UserManager;
 
+import java.io.IOException;
 import java.util.*;
 
 import static ru.craftlogic.api.CraftMessages.parseDuration;
@@ -54,114 +55,26 @@ public class CommandPermission extends CommandBase {
                 if (ctx.hasAction(1)) {
                     switch (ctx.action(1)) {
                         case "permissions": {
-                            if (group == null) {
-                                throw new CommandException("commands.perm.group.notFound", groupName);
-                            }
-                            if (ctx.has("value")) {
-                                String perm = ctx.get("value").asString();
-                                switch (ctx.action(2)) {
-                                    case "add": {
-                                        boolean added = group.permissions.add(perm);
-                                        ctx.sendMessage("commands.perm.group.permissions.add." + (added ? "success" : "unable"), perm, groupName);
-                                        if (added) {
-                                            permissionManager.save(true);
-                                        }
-                                        break;
-                                    }
-                                    case "delete": {
-                                        boolean deleted = group.permissions.remove(perm);
-                                        ctx.sendMessage("commands.perm.group.permissions.delete." + (deleted ? "success" : "unable"), perm, groupName);
-                                        if (deleted) {
-                                            permissionManager.save(true);
-                                        }
-                                        break;
-                                    }
-                                }
-                            } else {
-                                sendPermissions(group, ctx);
-                            }
+                            groupPermissions(ctx, permissionManager, groupName, group);
                             break;
                         }
                         case "metadata": {
-                            if (group == null) {
-                                throw new CommandException("commands.perm.group.notFound", groupName);
-                            }
-                            if (ctx.hasAction(2)) {
-                                String key = ctx.get("key").asString();
-                                switch (ctx.action(2)) {
-                                    case "set": {
-                                        String value = ctx.get("value").asString();
-                                        boolean updated = group.metadata.put(key, value) == null;
-                                        ctx.sendMessage("commands.perm.group.metadata.set." + (updated ? "success" : "unable"), key, value, groupName);
-                                        if (updated) {
-                                            permissionManager.save(true);
-                                        }
-                                        break;
-                                    }
-                                    case "unset": {
-                                        boolean deleted = group.metadata.remove(key) != null;
-                                        ctx.sendMessage("commands.perm.group.metadata.unset." + (deleted ? "success" : "unable"), key, groupName);
-                                        if (deleted) {
-                                            permissionManager.save(true);
-                                        }
-                                        break;
-                                    }
-                                }
-                            } else {
-                                sendMetadata(group, ctx);
-                            }
+                            groupMetadata(ctx, permissionManager, groupName, group);
                             break;
                         }
                         case "create": {
                             if (group != null) {
                                 throw new CommandException("commands.perm.group.create.exists", groupName);
                             }
-                            createGroup(permissionManager, ctx, groupName);
+                            groupCreate(permissionManager, ctx, groupName);
                             break;
                         }
                         case "delete": {
-                            if (group == null) {
-                                throw new CommandException("commands.perm.group.notFound", groupName);
-                            }
-                            if (groupName.equals(defaultGroupName)) {
-                                throw new CommandException("commands.perm.group.delete.unable", groupName);
-                            } else {
-                                boolean removed = permissionManager.groupManager.groups.remove(groupName, group);
-                                if (removed) {
-                                    permissionManager.save(true);
-                                }
-                                ctx.sendMessage("commands.perm.group.delete.success", groupName);
-                            }
+                            groupDelete(ctx, permissionManager, defaultGroupName, groupName, group);
                             break;
                         }
                         case "users": {
-                            if (group == null) {
-                                throw new CommandException("commands.perm.group.notFound", groupName);
-                            }
-                            if (groupName.equalsIgnoreCase(defaultGroupName)) {
-                                ctx.sendMessage("commands.perm.info.group.members.everyone");
-                            } else {
-                                List<String> users = new ArrayList<>();
-                                for (Map.Entry<UserManager.User, Long> e : group.users().entrySet()) {
-                                    UserManager.User user = e.getKey();
-                                    long expiration = e.getValue();
-                                    UUID id = user.id();
-                                    OfflinePlayer p = playerManager.getOffline(id);
-                                    if (expiration > current) {
-                                        String suffix = ", expires in: " + parseDuration(expiration - current);
-                                        if (p != null && p.getName() != null) {
-                                            users.add(id.toString() + " (" + p.getName() + ")" + suffix);
-                                        } else {
-                                            users.add(id.toString() + suffix);
-                                        }
-                                    } else if (p != null && p.getName() != null) {
-                                        users.add(id.toString() + " (" + p.getName() + ")");
-                                    } else {
-                                        users.add(id.toString());
-                                    }
-                                }
-                                ctx.sendMessage("commands.perm.info.group.members", users.toString());
-                            }
+                            groupUsers(ctx, defaultGroupName, playerManager, current, groupName, group);
                             break;
                         }
                     }
@@ -186,95 +99,15 @@ public class CommandPermission extends CommandBase {
                     if (ctx.hasAction(1)) {
                         switch (ctx.action(1)) {
                             case "groups": {
-                                if (ctx.has("value")) {
-                                    String groupName = ctx.get("value").asString();
-                                    long expiration = ctx.getIfPresent("expiration", arg -> arg.asDuration() + current)
-                                        .orElse(0L);
-                                    GroupManager.Group group = permissionManager.getGroup(groupName);
-                                    if (group != null) {
-                                        switch (ctx.action(2)) {
-                                            case "add": {
-                                                boolean added = !user.groups.containsKey(group);
-                                                if (added) {
-                                                    user.groups.put(group, expiration);
-                                                }
-                                                ctx.sendMessage("commands.perm.user.groups.add." + (added ? "success" : "unable"), groupName, username);
-                                                if (added) {
-                                                    permissionManager.save(true);
-                                                }
-                                                break;
-                                            }
-                                            case "delete": {
-                                                boolean deleted = user.groups.containsKey(group);
-                                                if (deleted) {
-                                                    user.groups.remove(group);
-                                                }
-                                                ctx.sendMessage("commands.perm.user.groups.delete." + (deleted ? "success" : "unable"), groupName, username);
-                                                if (deleted) {
-                                                    permissionManager.save(true);
-                                                }
-                                                break;
-                                            }
-                                        }
-                                    } else {
-                                        throw new CommandException("commands.perm.group.notFound", groupName);
-                                    }
-                                } else {
-                                    sendGroups(user, player.getName(), ctx);
-                                }
+                                userGroups(ctx, permissionManager, current, username, player, user);
                                 break;
                             }
                             case "permissions": {
-                                if (ctx.has("value")) {
-                                    String perm = ctx.get("value").asString();
-                                    switch (ctx.action(2)) {
-                                        case "add": {
-                                            boolean added = user.permissions.add(perm);
-                                            ctx.sendMessage("commands.perm.user.permissions.add." + (added ? "success" : "unable"), perm, username);
-                                            if (added) {
-                                                permissionManager.save(true);
-                                            }
-                                            break;
-                                        }
-                                        case "delete": {
-                                            boolean deleted = user.permissions.remove(perm);
-                                            ctx.sendMessage("commands.perm.user.permissions.delete." + (deleted ? "success" : "unable"), perm, username);
-                                            if (deleted) {
-                                                permissionManager.save(true);
-                                            }
-                                            break;
-                                        }
-                                    }
-                                } else {
-                                    sendPermissions(user, player.getName(), ctx);
-                                }
+                                userPermissions(ctx, permissionManager, username, player, user);
                                 break;
                             }
                             case "metadata": {
-                                if (ctx.hasAction(2)) {
-                                    String key = ctx.get("key").asString();
-                                    switch (ctx.action(2)) {
-                                        case "set": {
-                                            String value = ctx.get("value").asString();
-                                            boolean updated = user.metadata.put(key, value) == null;
-                                            ctx.sendMessage("commands.perm.user.metadata.set." + (updated ? "success" : "unable"), key, value, player.getName());
-                                            if (updated) {
-                                                permissionManager.save(true);
-                                            }
-                                            break;
-                                        }
-                                        case "unset": {
-                                            boolean deleted = user.metadata.remove(key) != null;
-                                            ctx.sendMessage("commands.perm.user.metadata.unset." + (deleted ? "success" : "unable"), key, player.getName());
-                                            if (deleted) {
-                                                permissionManager.save(true);
-                                            }
-                                            break;
-                                        }
-                                    }
-                                } else {
-                                    sendMetadata(user, player.getName(), ctx);
-                                }
+                                userMetadata(ctx, permissionManager, player, user);
                             }
                         }
                     } else {
@@ -285,6 +118,202 @@ public class CommandPermission extends CommandBase {
                 }
                 break;
             }
+        }
+    }
+
+    private static void groupUsers(CommandContext ctx, String defaultGroupName, PlayerManager playerManager, long current, String groupName, GroupManager.Group group) throws CommandException {
+        if (group == null) {
+            throw new CommandException("commands.perm.group.notFound", groupName);
+        }
+        if (groupName.equalsIgnoreCase(defaultGroupName)) {
+            ctx.sendMessage("commands.perm.info.group.members.everyone");
+        } else {
+            List<String> users = new ArrayList<>();
+            for (Map.Entry<UserManager.User, Long> e : group.users().entrySet()) {
+                UserManager.User user = e.getKey();
+                long expiration = e.getValue();
+                UUID id = user.id();
+                OfflinePlayer p = playerManager.getOffline(id);
+                if (expiration > current) {
+                    String suffix = ", expires in: " + parseDuration(expiration - current);
+                    if (p != null && p.getName() != null) {
+                        users.add(id.toString() + " (" + p.getName() + ")" + suffix);
+                    } else {
+                        users.add(id.toString() + suffix);
+                    }
+                } else if (p != null && p.getName() != null) {
+                    users.add(id.toString() + " (" + p.getName() + ")");
+                } else {
+                    users.add(id.toString());
+                }
+            }
+            ctx.sendMessage("commands.perm.info.group.members", users.toString());
+        }
+    }
+
+    private static void groupDelete(CommandContext ctx, PermissionManager permissionManager, String defaultGroupName, String groupName, GroupManager.Group group) throws CommandException, IOException {
+        if (group == null) {
+            throw new CommandException("commands.perm.group.notFound", groupName);
+        }
+        if (groupName.equals(defaultGroupName)) {
+            throw new CommandException("commands.perm.group.delete.unable", groupName);
+        } else {
+            boolean removed = permissionManager.groupManager.groups.remove(groupName, group);
+            if (removed) {
+                permissionManager.save(true);
+            }
+            ctx.sendMessage("commands.perm.group.delete.success", groupName);
+        }
+    }
+
+    private void groupMetadata(CommandContext ctx, PermissionManager permissionManager, String groupName, GroupManager.Group group) throws IOException, CommandException {
+        if (group == null) {
+            throw new CommandException("commands.perm.group.notFound", groupName);
+        }
+        if (ctx.hasAction(2)) {
+            String key = ctx.get("key").asString();
+            switch (ctx.action(2)) {
+                case "set": {
+                    String value = ctx.get("value").asString();
+                    boolean updated = group.metadata.put(key, value) == null;
+                    ctx.sendMessage("commands.perm.group.metadata.set." + (updated ? "success" : "unable"), key, value, groupName);
+                    if (updated) {
+                        permissionManager.save(true);
+                    }
+                    break;
+                }
+                case "unset": {
+                    boolean deleted = group.metadata.remove(key) != null;
+                    ctx.sendMessage("commands.perm.group.metadata.unset." + (deleted ? "success" : "unable"), key, groupName);
+                    if (deleted) {
+                        permissionManager.save(true);
+                    }
+                    break;
+                }
+            }
+        } else {
+            sendMetadata(group, ctx);
+        }
+    }
+
+    private void groupPermissions(CommandContext ctx, PermissionManager permissionManager, String groupName, GroupManager.Group group) throws CommandException, IOException {
+        if (group == null) {
+            throw new CommandException("commands.perm.group.notFound", groupName);
+        }
+        if (ctx.has("value")) {
+            String perm = ctx.get("value").asString();
+            switch (ctx.action(2)) {
+                case "add": {
+                    boolean added = group.permissions.add(perm);
+                    ctx.sendMessage("commands.perm.group.permissions.add." + (added ? "success" : "unable"), perm, groupName);
+                    if (added) {
+                        permissionManager.save(true);
+                    }
+                    break;
+                }
+                case "delete": {
+                    boolean deleted = group.permissions.remove(perm);
+                    ctx.sendMessage("commands.perm.group.permissions.delete." + (deleted ? "success" : "unable"), perm, groupName);
+                    if (deleted) {
+                        permissionManager.save(true);
+                    }
+                    break;
+                }
+            }
+        } else {
+            sendPermissions(group, ctx);
+        }
+    }
+
+    private void userMetadata(CommandContext ctx, PermissionManager permissionManager, OfflinePlayer player, UserManager.User user) throws IOException {
+        if (ctx.hasAction(2)) {
+            String key = ctx.get("key").asString();
+            switch (ctx.action(2)) {
+                case "set": {
+                    String value = ctx.get("value").asString();
+                    boolean updated = user.metadata.put(key, value) == null;
+                    ctx.sendMessage("commands.perm.user.metadata.set." + (updated ? "success" : "unable"), key, value, player.getName());
+                    if (updated) {
+                        permissionManager.save(true);
+                    }
+                    break;
+                }
+                case "unset": {
+                    boolean deleted = user.metadata.remove(key) != null;
+                    ctx.sendMessage("commands.perm.user.metadata.unset." + (deleted ? "success" : "unable"), key, player.getName());
+                    if (deleted) {
+                        permissionManager.save(true);
+                    }
+                    break;
+                }
+            }
+        } else {
+            sendMetadata(user, player.getName(), ctx);
+        }
+    }
+
+    private void userPermissions(CommandContext ctx, PermissionManager permissionManager, String username, OfflinePlayer player, UserManager.User user) throws IOException {
+        if (ctx.has("value")) {
+            String perm = ctx.get("value").asString();
+            switch (ctx.action(2)) {
+                case "add": {
+                    boolean added = user.permissions.add(perm);
+                    ctx.sendMessage("commands.perm.user.permissions.add." + (added ? "success" : "unable"), perm, username);
+                    if (added) {
+                        permissionManager.save(true);
+                    }
+                    break;
+                }
+                case "delete": {
+                    boolean deleted = user.permissions.remove(perm);
+                    ctx.sendMessage("commands.perm.user.permissions.delete." + (deleted ? "success" : "unable"), perm, username);
+                    if (deleted) {
+                        permissionManager.save(true);
+                    }
+                    break;
+                }
+            }
+        } else {
+            sendPermissions(user, player.getName(), ctx);
+        }
+    }
+
+    private void userGroups(CommandContext ctx, PermissionManager permissionManager, long current, String username, OfflinePlayer player, UserManager.User user) throws CommandException, IOException {
+        if (ctx.has("value")) {
+            String groupName = ctx.get("value").asString();
+            long expiration = ctx.getIfPresent("expiration", arg -> arg.asDuration() + current)
+                .orElse(0L);
+            GroupManager.Group group = permissionManager.getGroup(groupName);
+            if (group != null) {
+                switch (ctx.action(2)) {
+                    case "add": {
+                        boolean added = !user.groups.containsKey(group);
+                        if (added) {
+                            user.groups.put(group, expiration);
+                        }
+                        ctx.sendMessage("commands.perm.user.groups.add." + (added ? "success" : "unable"), groupName, username);
+                        if (added) {
+                            permissionManager.save(true);
+                        }
+                        break;
+                    }
+                    case "delete": {
+                        boolean deleted = user.groups.containsKey(group);
+                        if (deleted) {
+                            user.groups.remove(group);
+                        }
+                        ctx.sendMessage("commands.perm.user.groups.delete." + (deleted ? "success" : "unable"), groupName, username);
+                        if (deleted) {
+                            permissionManager.save(true);
+                        }
+                        break;
+                    }
+                }
+            } else {
+                throw new CommandException("commands.perm.group.notFound", groupName);
+            }
+        } else {
+            sendGroups(user, player.getName(), ctx);
         }
     }
 
@@ -383,7 +412,7 @@ public class CommandPermission extends CommandBase {
         for (Map.Entry<GroupManager.Group, Long> e : user.groups.entrySet()) {
             GroupManager.Group g = e.getKey();
             long expiration = e.getValue();
-            long current = System.currentTimeMillis();;
+            long current = System.currentTimeMillis();
             ctx.sendMessage(
                 Text.string("- ")
                     .appendText(g.name + (expiration > current ? " (expires in " + parseDuration(expiration - current) + ")" : ""), d ->
@@ -393,7 +422,7 @@ public class CommandPermission extends CommandBase {
         }
     }
 
-    private void createGroup(PermissionManager permissionManager, CommandContext ctx, String groupName) throws Exception {
+    private void groupCreate(PermissionManager permissionManager, CommandContext ctx, String groupName) throws Exception {
         int priority = 0;
         String parent = permissionManager.getDefaultGroupName();
         if (ctx.has("value")) {
